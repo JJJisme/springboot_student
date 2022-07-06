@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- ../ 表示当前路径的上一层路径
+        /表示从根路径开始查找
+      -->
+    <script src="../layui/layui.js"></script>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+
+
+</head>
+<body>
+<div class="layui-btn-group demoTable">
+    <button class="layui-btn" data-type="add">上传</button>
+</div>
+<table class="layui-table" lay-data="{width: 892, height:500, url: '/getFile2', page:true, id:'idTest'}" lay-filter="demo">
+    <thead>
+    <tr>
+        <th lay-data="{field:'id', width:80, sort: true, fixed: true,templet:'#num'}">编号</th>
+        <th lay-data="{field:'fdesc', width:150}">文件描述</th>
+        <th lay-data="{field:'ftime', width:180, sort: true}">创建时间</th>
+
+        <th lay-data="{field:'downloadtimes', width:160, sort: true, fixed: 'right'}">下载次数</th>
+        <th lay-data="{fixed: 'right', width:178, align:'center', toolbar: '#barDemo'}"></th>
+    </tr>
+    </thead>
+</table>
+<script type="text/html" id="num">
+{{d.LAY_TABLE_INDEX+1}}
+</script>
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">通过</a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+<script>
+    //加载模块
+    layui.use('table', function(){
+        var table = layui.table;
+        //监听表格复选框选择
+        table.on('checkbox(demo)', function(obj){
+            console.log(obj)
+        });
+        //监听工具条
+        table.on('tool(demo)', function(obj){
+            var data = obj.data;
+            if(obj.event === 'detail'){
+                //layer.msg('ID：'+ data.id + ' 的查看操作');
+                layer.confirm('真的通过吗？', function(index){
+                    layer.close(index); //关闭确认删除窗口
+                    var status = 1;
+                    $.ajax({
+                        url:"/setStatus",
+                        data:"id="+data.id+"&status="+status,
+                        success:function (res) {
+                            if (0 == res){
+                                location.reload();
+                            }
+                        }
+                    });
+                });
+            } else if(obj.event === 'del'){
+
+                layer.confirm('真的删除行么', function(index){
+                    $.post("/delFile", {"id":data.id}, function(res){
+                        if (0 == res){ //删除成功
+                            obj.del();
+                        }
+                        else{
+                            layer.msg("删除失败！未知异常！");
+                        }
+                        layer.close(index); //关闭确认删除窗口
+                    })
+
+
+                });
+            } else if(obj.event === 'edit'){
+                layer.alert('编辑行：<br>'+ JSON.stringify(data))
+            }
+        });
+
+        var $ = layui.$, active = {
+            getCheckData: function(){ //获取选中数据
+                var checkStatus = table.checkStatus('idTest')
+                    ,data = checkStatus.data;
+                console.log(JSON.stringify(data));//浏览器的检查里面的控制台窗口
+                //empno=7369&empno=7499
+                var loadIndex;
+                $.ajax({
+                    url:"/delFile",
+                    type:"post",
+                    data:JSON.stringify(data), //参数
+                    contentType:"application/json",//指定参数的格式
+                    beforeSend:function(){
+                        loadIndex = layer.load(2);
+                    },
+                    success:function(res){
+                        if (0 ==res){
+                            layer.close(loadIndex);
+                            //刷新当前页面
+                            //location.reload();
+                        }
+                    }
+                });
+            }
+            ,getCheckLength: function(){ //获取选中数目
+                var checkStatus = table.checkStatus('idTest')
+                    ,data = checkStatus.data;
+                layer.msg('选中了：'+ data.length + ' 个');
+            }
+            ,isAll: function(){ //验证是否全选
+                var checkStatus = table.checkStatus('idTest');
+                layer.msg(checkStatus.isAll ? '全选': '未全选')
+            }
+            ,add:function(){
+                layer.open({
+                    //1表示弹出一个本页面的层DIV
+                    //2表示弹出一个新的独立的页面iframe
+                    type:1,
+                    content:$("#add")
+                });
+            }
+        };
+
+        $('.demoTable .layui-btn').on('click', function(){
+            var type = $(this).data('type');
+            active[type] ? active[type].call(this) : '';
+        });
+    });
+</script>
+
+<div id="add" style="display:none;width:500px;height:300px;">
+    <form action="/doFileUpload" id="empform" method="post" enctype="multipart/form-data">
+        <table border="0">
+            <tr height="50">
+                <td>文件描述：</td>
+                <td><input name="fdesc" type="text"
+                           class="layui-input-inline"
+                           style="width:100px;"/></td>
+            </tr>
+            <tr  height="50">
+                <td>选择文件：</td>
+                <td><input name="file" type="file"
+                           class="layui-input-inline"
+                           style="width:100px;"/></td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <button class="layui-btn">
+                        提交
+                    </button></td>
+            </tr>
+        </table>
+    </form>
+</div>
+<script src="/js/jquery3.3.1.min.js"></script>
+<script>
+
+</script>
+</body>
+</html>

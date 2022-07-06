@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../layui/layui.js"></script>
+    <script src="/js/vue3.js"></script>
+    <script src="../js/jquery3.3.1.min.js"></script>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+</head>
+<body>
+<div class="layui-btn-group demoTable">
+    <button class="layui-btn" data-type="getCheckData">获取选中行数据</button>
+    <button class="layui-btn" data-type="getCheckLength">获取选中数目</button>
+    <button class="layui-btn" data-type="isAll">验证是否全选</button>
+    <button class="layui-btn" data-type="add">增加</button>
+</div>
+<table class="layui-table" lay-data="{width: 892, height:330, url: '/User', page:true, id:'idTest'}" lay-filter="demo">
+    <thead>
+    <tr>
+        <th lay-data="{type:'checkbox', fixed: 'left'}"></th>
+        <th lay-data="{field:'id', width:100, sort: true, fixed: true}">用户编号</th>
+        <th lay-data="{field:'name', width:80}">用户名</th>
+        <th lay-data="{field:'pwd', width:80, sort: true}">密码</th>
+        <th lay-data="{field:'sex', width:80, sort: true}">性别</th>
+        <th lay-data="{field:'gold', width:80, sort: true}">积分</th>
+        <th lay-data="{field:'profile', width:80, sort: true}">头像</th>
+        <th lay-data="{field:'roles', width:270, templet:'#roles'}">角色</th>
+        <th lay-data="{fixed: 'right', width:255, align:'center', toolbar: '#barDemo'}"></th>
+
+    </tr>
+    </thead>
+</table>
+
+<script type="text/html" id="roles">
+    {{# layui.each(d.roles, function(index, item){     }}
+    <span class="layui-badge layui-bg-blue">{{ item.rolename}}</span>
+    {{# });  }}
+</script>
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">查看</a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="updatePwd">重置密码</a>
+</script>
+
+<script>
+
+    layui.use(['table','form'], function(){
+        var table = layui.table;
+        var form = layui.form;
+        //监听表格复选框选择
+        table.on('checkbox(demo)', function(obj){
+            console.log(obj)
+        });
+        //监听工具条
+        table.on('tool(demo)', function(obj){
+            var data = obj.data;
+            if(obj.event === 'detail'){
+                layer.msg('ID：'+ data.id + ' 的查看操作');
+            } else if(obj.event === 'del'){
+                layer.confirm('真的删除行么', function(index){
+                    $.post("/delUser",{"id":data.id},function(res){
+                        if (res == 0){//删除成功
+                            obj.del();
+                        }else {
+                            layer.msg("删除失败，未知异常！")
+                        }
+                        layer.close(index);
+                    })
+                    // obj.del();
+                    // layer.close(index);
+                });
+            } else if(obj.event === 'edit'){
+                // layer.alert('编辑行：<br>'+ JSON.stringify(data))
+                layer.prompt({
+                    formType: 3,
+                    value: data.rolename
+                },function (value,index) {
+                    $.post("",{"id":data.id})
+
+                });
+            } else if (obj.event === 'updatePwd'){
+                $(function  () {
+                    layer.open({
+                        type:1,
+                        content:$("#update")
+                    })
+                })
+            }
+        });
+
+
+        var $ = layui.$, active = {
+            getCheckData: function(){ //获取选中数据
+                var checkStatus = table.checkStatus('idTest')
+                    ,data = checkStatus.data;
+                layer.alert(JSON.stringify(data));
+            }
+            ,getCheckLength: function(){ //获取选中数目
+                var checkStatus = table.checkStatus('idTest')
+                    ,data = checkStatus.data;
+                layer.msg('选中了：'+ data.length + ' 个');
+            }
+            ,isAll: function(){ //验证是否全选
+                var checkStatus = table.checkStatus('idTest');
+                layer.msg(checkStatus.isAll ? '全选': '未全选')
+            }
+            ,add:function(){
+                $.post("/role",function(role){
+                    let html = "";
+                    for (let j = 0; j < role.length;j++){
+                        html += `<input type="checkbox" name="roleid" title="`;
+                        html += role[j].rolename;
+                        html += `" value="`;
+                        html += role[j].roleid;
+                        html +=`">`;
+                    }
+                    $("#rolesa").html(html);
+                    form.render(); //刷新layui的表单
+                    layer.open({
+                        type:1,
+                        content:$("#add")
+                    })
+                })
+
+            }
+        };
+
+        $('.demoTable .layui-btn').on('click', function(){
+            var type = $(this).data('type');
+            active[type] ? active[type].call(this) : '';
+        });
+    });
+</script>
+
+<div id="add" style="display: none; width: 500px;height: 300px;">
+    <form  class="layui-form"  id="userform" action="/addUser"  method="post" enctype="multipart/form-data">
+        <table>
+            <tr height="30">
+                <td>用户名：</td>
+                <td><input type="text" name="name" class="layui-input-inline"> </td>
+            </tr>
+            <tr height="30">
+                <td>密码：</td>
+                <td><input type="text" name="pwd" class="layui-input-inline"> </td>
+            </tr>
+            <tr height="30">
+                <td>性别：</td>
+                <td>
+                    <input type="radio" name="sex" value="女" title="女">
+                    <input type="radio" name="sex" value="男" title="男">
+                </td>
+            </tr>
+            <tr height="30">
+                <td>头像：</td>
+                <td><input type="file" name="file" class="layui-input-inline"> </td>
+            </tr>
+            <tr>
+                <td>角色：</td>
+                <td>
+                    <div></div>
+                    <div class="layui-form-item"  style=" padding:0px;margin:0px;width:200px;">
+<!--                        <label class="layui-form-label">角色</label>-->
+                        <div id="rolesa">
+                            <!--<input type="checkbox" name="roleid" value="1" title="超级管理员" checked="">
+                            <input type="checkbox" name="roleid" value="2" title="论坛管理员">
+                            <input type="checkbox" name="roleid" value="3" title="新闻管理员">
+                            <input type="checkbox" name="roleid" value="4" title="客服人员">-->
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr >
+                <td><button class="layui-btn">提交</button></td>
+                <td><input class="layui-btn" type="reset" title="重置"></button></td>
+            </tr>
+        </table>
+
+    </form>
+</div>
+
+<div id="update" style="display: none; width: 500px;height: 300px;">
+    <form id="pwdform">
+        <table>
+            <tr height="30">
+                <td>密码：</td>
+                <td><input type="text" name="pwd" class="layui-input-inline"> </td>
+            </tr>
+            <tr rolspan="2">
+                <td><button onclick="updatePwd()" type="button" class="layui-btn">提交</button></td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+
+<script>
+    /*function add() {
+        $.ajax({
+            url:"/addUser",
+            data:$("#userform").serialize(),
+            beforeSend:function () {
+                loadIndex = layer.load(2);
+            },
+            success:function (res) {
+                if (res == 0){
+                    layer.close(loadIndex);
+                    //刷新当前页面
+                    location.reload();
+                }
+            }
+        });
+    }*/
+
+    function updatePwd() {
+        $.ajax({
+            url:"/updatePwd",
+            data:$("#pwdform").serialize(),
+            beforeSend:function () {
+                loadIndex = layer.load(2);
+            },
+            success:function (res) {
+                if (res == 0){
+                    layer.close(loadIndex);
+                    //刷新当前页面
+                    location.reload();
+                }
+            }
+        });
+    }
+</script>
+
+<script>
+    const app={
+        data(){
+            return{
+
+            }
+        },
+        methods:{
+            open(){
+
+            },
+            add(){
+
+            }
+        }
+    }
+    const vue = Vue.createApp(app);
+    vue.mount("#add");
+</script>
+</body>
+</html>
